@@ -91,7 +91,8 @@ module Trinidad
         options_ask << '(separated by `;`)'
         name_ask = 'Service name? {Alphanumeric and spaces only}'
         name_default = 'Trinidad'
-        @trinidad_name = defaults["trinidad_name"] || ask(name_ask, name_default)
+        # look for trinidad_name for backward compatibility
+        @trinidad_name = defaults["service_name"] || defaults["trinidad_name"] || ask(name_ask, name_default)
       end
       
       def configure_windows_service

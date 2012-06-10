@@ -1,11 +1,92 @@
 #!/usr/bin/env jruby
 
+require 'optparse'
 require 'trinidad_init_services'
 
-if ARGV.size > 0
-  require 'yaml'
-  config = YAML.load File.read(ARGV[0])
-  Trinidad::InitServices::Configuration.new.configure(config)
-else
-  Trinidad::InitServices::Configuration.new.configure
+# Hash to collect config options
+config = Hash.new
+
+# global options for all subcommands
+global = OptionParser.new do |opts|
+  opts.banner = "Usage: trinidad_init_service [GLOBAL OPTIONS] COMMAND [OPTIONS]"
+  opts.separator  ""
+  opts.separator  "Commands"
+  opts.separator  "     install: install a Trinidad service"
+  opts.separator  "     uninstall: uninstall a Trinidad service"
+  opts.separator  ""
+  opts.separator  "Use COMMAND --help for further information"
+  opts.separator  ""
+  opts.separator  "Global options"
+
+  opts.on("-c", "--config [FILE]", "read settings from YAML file") do |file|
+    require 'yaml'
+    config = YAML.load_file file
+  end
+  opts.on("-h", "--help", "Show this message") do
+    puts opts
+    exit
+  end
+  opts.on("-v", "--version", "Show version") do
+    puts "trinidad_init_servic version #{Trinidad::InitServices::VERSION}"
+    exit
+  end
+end
+
+# subcommand specific options
+subcommands = {
+  'install' => OptionParser.new do |opts|
+    opts.banner = "Usage: trinidad_init_service [GLOBAL OPTIONS] install [OPTIONS]"
+    opts.separator  ""
+
+    opts.on("-p", "--app-path [PATH]", "path to the jRuby application") do |path|
+      #config[:app_path] = path
+      config["app_path"] = path
+    end
+    opts.on("-s", "--service-name [NAME]", "name of service to install") do |name|
+      #config[:service_name] = name
+      config["service_name"] = name
+    end
+    opts.on("-t", "--trinidad-options [OPTIONS]", "options to pass to Trinidad server") do |options|
+      #config[:trinidad_options] = options
+      config["trinidad_options"] = options
+    end
+    opts.on("--jruby-home [PATH]", "home path for jRuby") do |path|
+      #config[:jruby_home] = path
+      config["jruby_home"] = path
+    end
+    opts.on("--jruby-compat-version [VERSION]", ["RUBY1_8", "RUBY1_9"], "compat version for jRuby") do |version|
+      #option[:jruby_compat_version] = version
+      config["jruby_compat_version"] = version
+    end
+    opts.on("-h", "--help", "Show this message") do
+      puts opts
+      exit
+    end
+  end,
+  'uninstall' => OptionParser.new do |opts|
+    opts.banner = "Usage: trinidad_init_service [GLOBAL OPTIONS] uninstall [OPTIONS]"
+    opts.separator  ""
+
+    opts.on("-s", "--service-name [NAME]", "name of service to uninstall (Windows only)") do |name|
+      #config[:service_name] = name
+      config["service_name"] = name
+    end
+    opts.on("-h", "--help", "Show this message") do
+      puts opts
+      exit
+    end
+  end
+}
+
+global.order!
+
+case ARGV[0]
+  when "install"
+    subcommands[ARGV.shift].order!
+    Trinidad::InitServices::Configuration.new.configure(config)
+  when "uninstall"
+    subcommands[ARGV.shift].order!
+    Trinidad::InitServices::Uninstall.new.uninstall(config)
+  else
+    puts global
 end
